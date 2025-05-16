@@ -306,4 +306,4 @@ class LaneLines:
         right_lane_bottom = right_fit_cr[0]*(y_eval*ym_per_pix)**2 + right_fit_cr[1]*(y_eval*ym_per_pix) + right_fit_cr[2]
         vehicle_position = (left_lane_bottom + right_lane_bottom)/2
 
-        return left_curverad, right_curverad, vehicle_position 
+        return left_curverad, right_curverad, vehicle_position

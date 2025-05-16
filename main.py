@@ -59,7 +59,7 @@ def main():
     findLaneLines = FindLaneLines()
     # Update paths to use data directory
     input_video = os.path.join('data', 'videos', 'challenge_video.mp4')
-    output_video = os.path.join('output', 'output3.mp4')
+    output_video = os.path.join('output', 'output4.mp4')
     findLaneLines.process_video(input_video, output_video)
 
 if __name__ == "__main__":
