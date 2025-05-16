@@ -124,7 +124,7 @@ class LaneLines:
         rightx_current = rightx_base
         y_current = img.shape[0] + self.window_height//2
 
-        # Create empty lists to reveice left and right lane pixel
+        # Create empty lists to receive left and right lane pixel
         leftx, lefty, rightx, righty = [], [], [], []
 
         # Step through the windows one by one
@@ -146,6 +146,18 @@ class LaneLines:
                 leftx_current = np.int32(np.mean(good_left_x))
             if len(good_right_x) > self.minpix:
                 rightx_current = np.int32(np.mean(good_right_x))
+
+        # Store the lane indices for later use
+        self.left_lane_inds = np.zeros_like(self.nonzerox, dtype=bool)
+        self.right_lane_inds = np.zeros_like(self.nonzerox, dtype=bool)
+        
+        if len(leftx) > 0:
+            left_indices = np.in1d(self.nonzerox, leftx) & np.in1d(self.nonzeroy, lefty)
+            self.left_lane_inds[left_indices] = True
+            
+        if len(rightx) > 0:
+            right_indices = np.in1d(self.nonzerox, rightx) & np.in1d(self.nonzeroy, righty)
+            self.right_lane_inds[right_indices] = True
 
         return leftx, lefty, rightx, righty, out_img
 
@@ -264,23 +276,34 @@ class LaneLines:
         Returns:
             left_curvature (float): Radius of curvature of left lane line
             right_curvature (float): Radius of curvature of right lane line
-            center_offset (float): Offset of the center of the lane from the center of the image
+            position (float): Position of the vehicle relative to center
         """
-        ym_per_pix = 30/720  # meters per pixel in y dimension
-        xm_per_pix = 3.7/700  # meters per pixel in x dimension
+        # Define conversions in x and y from pixels space to meters
+        ym_per_pix = 30/720 # meters per pixel in y dimension
+        xm_per_pix = 3.7/700 # meters per pixel in x dimension
 
-        left_fit_cr = np.polyfit(self.nonzeroy * ym_per_pix, self.nonzerox * xm_per_pix, 2)
-        right_fit_cr = np.polyfit(self.nonzeroy * ym_per_pix, self.nonzerox * xm_per_pix, 2)
+        # Get the lane line pixels
+        leftx = self.nonzerox[self.left_lane_inds]
+        lefty = self.nonzeroy[self.left_lane_inds]
+        rightx = self.nonzerox[self.right_lane_inds]
+        righty = self.nonzeroy[self.right_lane_inds]
+
+        # Check if we have enough points to fit a polynomial
+        if len(leftx) < 10 or len(rightx) < 10:
+            return 0, 0, 0  # Return default values if not enough points
+
+        # Fit new polynomials to x,y in world space
+        left_fit_cr = np.polyfit(lefty * ym_per_pix, leftx * xm_per_pix, 2)
+        right_fit_cr = np.polyfit(righty * ym_per_pix, rightx * xm_per_pix, 2)
 
         # Calculate the new radii of curvature
-        y_eval = np.max(self.nonzeroy)
+        y_eval = np.max(lefty)
         left_curverad = ((1 + (2*left_fit_cr[0]*y_eval*ym_per_pix + left_fit_cr[1])**2)**1.5) / np.absolute(2*left_fit_cr[0])
         right_curverad = ((1 + (2*right_fit_cr[0]*y_eval*ym_per_pix + right_fit_cr[1])**2)**1.5) / np.absolute(2*right_fit_cr[0])
 
-        # Calculate vehicle center offset
-        left_fit_x_int = left_fit_cr[0]*y_eval**2 + left_fit_cr[1]*y_eval + left_fit_cr[2]
-        right_fit_x_int = right_fit_cr[0]*y_eval**2 + right_fit_cr[1]*y_eval + right_fit_cr[2]
-        center_offset = (left_fit_x_int + right_fit_x_int) / 2 - self.img.shape[1] / 2
-        center_offset = center_offset * xm_per_pix
+        # Calculate vehicle position
+        left_lane_bottom = left_fit_cr[0]*(y_eval*ym_per_pix)**2 + left_fit_cr[1]*(y_eval*ym_per_pix) + left_fit_cr[2]
+        right_lane_bottom = right_fit_cr[0]*(y_eval*ym_per_pix)**2 + right_fit_cr[1]*(y_eval*ym_per_pix) + right_fit_cr[2]
+        vehicle_position = (left_lane_bottom + right_lane_bottom)/2
 
-        return left_curverad, right_curverad, center_offset 
+        return left_curverad, right_curverad, vehicle_position 

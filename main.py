@@ -37,6 +37,10 @@ class FindLaneLines:
         img = self.lanelines.forward(img)
         img = self.transform.backward(img)
 
+        # Convert binary image to RGB if needed
+        if len(img.shape) == 2:
+            img = np.dstack((img, img, img))
+
         out_img = cv2.addWeighted(out_img, 1, img, 0.6, 0)
         out_img = self.lanelines.plot(out_img)
         return out_img
@@ -55,7 +59,7 @@ def main():
     findLaneLines = FindLaneLines()
     # Update paths to use data directory
     input_video = os.path.join('data', 'videos', 'challenge_video.mp4')
-    output_video = os.path.join('output', 'output2.mp4')
+    output_video = os.path.join('output', 'output3.mp4')
     findLaneLines.process_video(input_video, output_video)
 
 if __name__ == "__main__":
